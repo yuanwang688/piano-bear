@@ -1,0 +1,338 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<style>*,*::before,*::after{box-sizing:border-box}body{margin:0}[hidden]{display:none!important}:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}</style>
+</head>
+<body>
+<title>Piano Bear</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;800&family=Nunito:wght@500;700&display=swap">
+<style>
+/* Layout: one screen, bear center stage, piano-key energy bar below, one big action button. Single bright look by choice. */
+:root{
+  --sky:#dff1fb; --sky2:#c4e6f7; --ink:#2b2340; --honey:#b5753c; --honey-dk:#8a5427;
+  --muzzle:#f1d3a8; --key:#ffffff; --key-edge:#9db8c9; --lit:#ffb627; --lit2:#ff7a59;
+  --card:#ffffffcc; --tv:#5b4bd6; --ok:#2fa36b;
+  --display:"Baloo 2","Trebuchet MS",system-ui,sans-serif;
+  --body:"Nunito",system-ui,-apple-system,sans-serif;
+  color-scheme:light;
+}
+html,body{height:100%}
+body{background:linear-gradient(180deg,var(--sky),var(--sky2));color:var(--ink);font-family:var(--body);
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));
+  -webkit-user-select:none;user-select:none;overflow-x:hidden}
+.app{max-width:560px;margin:0 auto;min-height:100%;display:flex;flex-direction:column;align-items:center;gap:14px;padding-block:14px 24px;position:relative}
+.top{width:100%;display:flex;justify-content:space-between;align-items:center}
+h1{font-family:var(--display);font-weight:800;font-size:1.7rem;margin:0;letter-spacing:.5px}
+.gear{font:600 .8rem var(--body);background:var(--card);border:2px solid var(--key-edge);border-radius:999px;padding:8px 12px;color:var(--ink);position:relative;overflow:hidden;cursor:pointer;touch-action:none}
+.gear .fill{position:absolute;inset:0;background:var(--sky2);transform-origin:left;transform:scaleX(0)}
+.gear span{position:relative}
+.status{font:700 1rem var(--body);min-height:1.4em;text-align:center}
+
+.stage{position:relative;width:min(300px,78vw);aspect-ratio:1;max-width:100%}
+.stage svg{width:100%;height:100%;overflow:visible}
+.note{position:absolute;font-size:2rem;color:var(--tv);opacity:0;pointer-events:none;font-family:serif}
+.dancing .note{animation:float 2.2s ease-out infinite}
+.dancing .note:nth-child(2){animation-delay:.7s;left:78%}
+.dancing .note:nth-child(3){animation-delay:1.4s;left:8%;color:var(--lit2)}
+.note{left:14%;top:40%}
+@keyframes float{0%{opacity:0;transform:translateY(0) rotate(-10deg)}20%{opacity:1}100%{opacity:0;transform:translateY(-120px) rotate(15deg)}}
+
+#bear{transform-origin:150px 270px}
+.dancing #bear{animation:bop .5s ease-in-out infinite alternate}
+.dancing #armL{animation:waveL .5s ease-in-out infinite alternate}
+.dancing #armR{animation:waveR .5s ease-in-out infinite alternate}
+#armL{transform-origin:95px 175px}#armR{transform-origin:205px 175px}
+@keyframes bop{from{transform:translateY(0) rotate(-6deg)}to{transform:translateY(-14px) rotate(6deg)}}
+@keyframes waveL{from{transform:rotate(20deg)}to{transform:rotate(-55deg)}}
+@keyframes waveR{from{transform:rotate(-20deg)}to{transform:rotate(55deg)}}
+.sleepy #eyes{display:none}.sleepy #eyesClosed{display:inline}
+#eyesClosed{display:none}
+
+.bar{width:100%;background:var(--card);border-radius:18px;padding:12px;display:flex;flex-direction:column;gap:8px;box-shadow:0 6px 0 #00000012}
+.keys{display:flex;gap:3px;height:70px}
+.k{flex:1;background:var(--key);border:2px solid var(--key-edge);border-top:none;border-radius:0 0 8px 8px;position:relative;overflow:hidden}
+.k i{position:absolute;left:0;right:0;bottom:0;height:0;background:linear-gradient(0deg,var(--lit2),var(--lit));transition:height .4s}
+.barlabel{display:flex;justify-content:space-between;font:700 .95rem var(--body);font-variant-numeric:tabular-nums}
+
+.big{font-family:var(--display);font-weight:800;font-size:1.6rem;border:none;border-radius:999px;padding:14px 30px;color:#fff;cursor:pointer;box-shadow:0 6px 0 #00000030;transition:transform .1s}
+.big:active{transform:translateY(4px);box-shadow:0 2px 0 #00000030}
+.big:focus-visible,.gear:focus-visible,button:focus-visible{outline:3px solid var(--tv);outline-offset:3px}
+.start{background:var(--ok)}
+.redeem{background:var(--tv);animation:pulse 1.2s ease-in-out infinite}
+@keyframes pulse{50%{transform:scale(1.06)}}
+
+.tvscreen{width:100%;display:flex;flex-direction:column;align-items:center;gap:14px;text-align:center}
+.tvbox{background:var(--tv);color:#fff;border-radius:28px;padding:22px 28px;border:8px solid var(--ink);width:min(340px,100%)}
+.count{font-family:var(--display);font-weight:800;font-size:4.2rem;line-height:1;font-variant-numeric:tabular-nums}
+.row{display:flex;gap:10px;flex-wrap:wrap;justify-content:center}
+.soft{font:700 1rem var(--body);background:var(--card);border:2px solid var(--key-edge);border-radius:999px;padding:10px 18px;color:var(--ink);cursor:pointer}
+
+.panel{position:fixed;inset:0;background:#2b234088;display:flex;align-items:center;justify-content:center;padding:16px;z-index:5}
+.sheet{background:#fff;color:var(--ink);border-radius:20px;padding:20px;width:min(420px,100%);display:flex;flex-direction:column;gap:14px}
+.sheet h2{font-family:var(--display);margin:0;font-size:1.4rem}
+.sheet label{display:flex;flex-direction:column;gap:6px;font-weight:700}
+.sheet small{font-weight:500;opacity:.75}
+.sheet input[type=number]{font:700 1.1rem var(--body);padding:8px;border-radius:10px;border:2px solid var(--key-edge);width:100px}
+.meter{height:12px;background:var(--sky);border-radius:6px;position:relative;overflow:hidden}
+.meter i{position:absolute;left:0;top:0;bottom:0;background:var(--ok);width:0}
+.meter b{position:absolute;top:0;bottom:0;width:3px;background:var(--lit2)}
+.note-box{background:#fff3d6;border-radius:12px;padding:10px 12px;font-size:.9rem}
+@media (prefers-reduced-motion:reduce){.dancing #bear,.dancing #armL,.dancing #armR,.redeem,.dancing .note{animation-duration:2s}}
+</style>
+
+<div class="app" id="app">
+  <div class="top">
+    <h1>Piano Bear</h1>
+    <button class="gear" id="gear" aria-label="Grown-up settings (press and hold)"><div class="fill" id="gearFill"></div><span>Grown-ups: hold</span></button>
+  </div>
+
+  <div id="practice" style="display:contents">
+    <div class="stage sleepy" id="stage">
+      <span class="note">♪</span><span class="note">♫</span><span class="note">♪</span>
+      <svg viewBox="0 0 300 300" aria-label="Teddy bear">
+        <ellipse cx="150" cy="285" rx="80" ry="10" fill="#00000018"/>
+        <g id="bear">
+          <ellipse cx="110" cy="262" rx="28" ry="20" fill="var(--honey-dk)"/>
+          <ellipse cx="190" cy="262" rx="28" ry="20" fill="var(--honey-dk)"/>
+          <g id="armL"><ellipse cx="80" cy="200" rx="20" ry="40" fill="var(--honey-dk)" transform="rotate(25 80 200)"/></g>
+          <g id="armR"><ellipse cx="220" cy="200" rx="20" ry="40" fill="var(--honey-dk)" transform="rotate(-25 220 200)"/></g>
+          <ellipse cx="150" cy="210" rx="62" ry="62" fill="var(--honey)"/>
+          <ellipse cx="150" cy="222" rx="36" ry="38" fill="var(--muzzle)"/>
+          <circle cx="92" cy="68" r="24" fill="var(--honey)"/><circle cx="92" cy="68" r="12" fill="var(--muzzle)"/>
+          <circle cx="208" cy="68" r="24" fill="var(--honey)"/><circle cx="208" cy="68" r="12" fill="var(--muzzle)"/>
+          <circle cx="150" cy="112" r="62" fill="var(--honey)"/>
+          <ellipse cx="150" cy="136" rx="30" ry="24" fill="var(--muzzle)"/>
+          <ellipse cx="150" cy="126" rx="10" ry="7" fill="var(--ink)"/>
+          <path d="M138 142 Q150 154 162 142" stroke="var(--ink)" stroke-width="4" fill="none" stroke-linecap="round"/>
+          <g id="eyes"><circle cx="126" cy="100" r="7" fill="var(--ink)"/><circle cx="174" cy="100" r="7" fill="var(--ink)"/><circle cx="128" cy="98" r="2" fill="#fff"/><circle cx="176" cy="98" r="2" fill="#fff"/></g>
+          <g id="eyesClosed" stroke="var(--ink)" stroke-width="4" fill="none" stroke-linecap="round"><path d="M118 102 Q126 96 134 102"/><path d="M166 102 Q174 96 182 102"/></g>
+          <circle cx="112" cy="122" r="8" fill="#f29a8e" opacity=".6"/><circle cx="188" cy="122" r="8" fill="#f29a8e" opacity=".6"/>
+        </g>
+      </svg>
+    </div>
+    <div class="status" id="status">Bear is sleepy. Play some piano to wake him up!</div>
+    <div class="bar">
+      <div class="keys" id="keys"></div>
+      <div class="barlabel"><span id="played">0:00 played</span><span id="goalLbl">Goal 15 min</span></div>
+    </div>
+    <button class="big start" id="startBtn">Ready to play!</button>
+    <button class="big redeem" id="redeemBtn" hidden>Redeem for TV</button>
+  </div>
+
+  <div class="tvscreen" id="tv" hidden>
+    <div class="tvbox">
+      <div>TV time left</div>
+      <div class="count" id="count">15:00</div>
+    </div>
+    <div class="status" id="tvStatus">Enjoy your show! You earned it.</div>
+    <div class="row">
+      <button class="soft" id="pauseBtn">Pause</button>
+      <button class="soft" id="stopBtn">Stop TV time</button>
+    </div>
+    <button class="big start" id="doneBtn" hidden>OK, all done!</button>
+  </div>
+</div>
+
+<div class="panel" id="panel" hidden>
+  <div class="sheet" role="dialog" aria-label="Grown-up settings">
+    <h2>Grown-up settings</h2>
+    <label>Practice goal (minutes)
+      <input type="number" id="goalIn" min="1" max="120" value="15">
+    </label>
+    <label>Hearing sensitivity
+      <input type="range" id="sensIn" min="1" max="10" value="5">
+      <small>Play a note: the green bar should cross the orange line. Talking should mostly stay under it.</small>
+      <div class="meter"><i id="meterFill"></i><b id="meterLine"></b></div>
+    </label>
+    <label style="flex-direction:row;align-items:center;gap:10px"><input type="checkbox" id="manualIn"> Count time without the microphone</label>
+    <div class="note-box" id="micNote" hidden></div>
+    <div class="row" style="justify-content:space-between">
+      <button class="soft" id="resetBtn">Reset minutes</button>
+      <button class="soft" id="addBtn">+1 minute</button>
+      <button class="big start" id="closeBtn" style="font-size:1.1rem;padding:10px 22px">Done</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(()=>{
+const $=id=>document.getElementById(id);
+const store={get(k,d){try{const v=localStorage.getItem('pb_'+k);return v==null?d:JSON.parse(v)}catch(e){return d}},
+             set(k,v){try{localStorage.setItem('pb_'+k,JSON.stringify(v))}catch(e){}}};
+
+let goal=store.get('goal',15), sens=store.get('sens',5), earned=store.get('earned',0), manual=false;
+let ctx=null, analyser=null, td=null, fd=null, listening=false, lastHit=0, lastTick=0, level=0;
+let tvEnd=0, tvPausedLeft=null, tvTimer=null, alarmStop=null, wake=null;
+
+/* ---------- energy bar ---------- */
+function buildKeys(){
+  const n=Math.min(goal,30), keys=$('keys'); keys.innerHTML='';
+  for(let i=0;i<n;i++){const k=document.createElement('div');k.className='k';k.appendChild(document.createElement('i'));keys.appendChild(k)}
+  $('goalLbl').textContent='Goal '+goal+' min';
+}
+function fmt(s){s=Math.max(0,Math.round(s));return Math.floor(s/60)+':'+String(s%60).padStart(2,'0')}
+function render(){
+  const ks=$('keys').children, n=ks.length, frac=Math.min(1,earned/(goal*60));
+  for(let i=0;i<n;i++){const f=Math.max(0,Math.min(1,frac*n-i));ks[i].firstChild.style.height=(f*100)+'%'}
+  $('played').textContent=fmt(earned)+' played';
+  const full=earned>=goal*60;
+  $('redeemBtn').hidden=!full;
+  $('startBtn').hidden=full||listening;
+}
+
+/* ---------- listening ---------- */
+async function startMic(){
+  if(!ctx) ctx=new (window.AudioContext||window.webkitAudioContext)();
+  if(ctx.state==='suspended') await ctx.resume();
+  try{
+    const stream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:false,noiseSuppression:false,autoGainControl:false}});
+    const src=ctx.createMediaStreamSource(stream);
+    analyser=ctx.createAnalyser(); analyser.fftSize=4096; analyser.smoothingTimeConstant=0.3;
+    src.connect(analyser);
+    td=new Float32Array(analyser.fftSize); fd=new Float32Array(analyser.frequencyBinCount);
+    return true;
+  }catch(e){
+    $('micNote').hidden=false;
+    $('micNote').textContent="The microphone isn't available here. Open the page in Safari or Chrome to let Bear listen, or tick “Count time without the microphone” while she plays.";
+    return false;
+  }
+}
+function hearsPiano(){
+  if(!analyser) return false;
+  analyser.getFloatTimeDomainData(td);
+  let s=0; for(let i=0;i<td.length;i++) s+=td[i]*td[i];
+  const rms=Math.sqrt(s/td.length);
+  level=Math.min(1,rms*12);
+  const thresh=0.11-sens*0.01;          // sensitivity 1..10 -> loudness gate
+  if(level<thresh*12*0.5) return false;
+  analyser.getFloatFrequencyData(fd);
+  const hz=ctx.sampleRate/analyser.fftSize, lo=Math.floor(50/hz), hi=Math.floor(4200/hz);
+  let max=-Infinity, sum=0;
+  for(let i=lo;i<hi;i++){const v=fd[i]; if(v>max)max=v; sum+=v}
+  const mean=sum/(hi-lo);
+  return (max-mean)>28;                  // piano notes have sharp, clear peaks
+}
+function loop(t){
+  const now=performance.now(), dt=lastTick?(now-lastTick)/1000:0; lastTick=now;
+  if(listening){
+    if(manual || hearsPiano()) lastHit=now;
+    const playing=now-lastHit<1600;
+    $('stage').classList.toggle('dancing',playing);
+    $('stage').classList.toggle('sleepy',!playing);
+    if(playing && dt<1){ earned+=dt; }
+    $('status').textContent=playing?(earned>=goal*60?'Wow! Extra minutes for even more TV!':'Bear is dancing! Keep playing!'):'Bear is waiting for music…';
+    if(Math.floor(earned)!==Math.floor(earned-dt)) store.set('earned',earned);
+    render();
+  }
+  if(!$('panel').hidden){
+    $('meterFill').style.width=(level*100)+'%';
+    $('meterLine').style.left=Math.min(97,(0.11-sens*0.01)*12*50)+'%';
+    if(!listening && analyser) hearsPiano();
+  }
+  requestAnimationFrame(loop);
+}
+$('startBtn').onclick=async()=>{
+  const ok=await startMic();
+  if(!ok && !manual){ openPanel(); return; }
+  listening=true; lastTick=0; render(); keepAwake();
+  $('status').textContent='Bear is listening… play something!';
+};
+
+/* ---------- TV countdown ---------- */
+$('redeemBtn').onclick=()=>{
+  if(!ctx) ctx=new (window.AudioContext||window.webkitAudioContext)();
+  ctx.resume();
+  const secs=Math.round(earned);
+  earned=0; store.set('earned',0); listening=false;
+  tvEnd=Date.now()+secs*1000; tvPausedLeft=null; store.set('tvEnd',tvEnd);
+  showTV(); keepAwake();
+};
+function showTV(){
+  $('practice').style.display='none'; $('tv').hidden=false;
+  $('doneBtn').hidden=true; $('pauseBtn').textContent='Pause'; $('pauseBtn').parentElement.hidden=false;
+  $('tvStatus').textContent='Enjoy your show! You earned it.';
+  clearInterval(tvTimer); tvTimer=setInterval(tickTV,250); tickTV();
+}
+function tickTV(){
+  const left=tvPausedLeft!=null?tvPausedLeft:(tvEnd-Date.now())/1000;
+  $('count').textContent=fmt(Math.ceil(left));
+  if(left<=0 && tvPausedLeft==null){
+    clearInterval(tvTimer); store.set('tvEnd',0);
+    $('count').textContent='0:00';
+    $('tvStatus').textContent='TV time is all done. Great job today!';
+    $('pauseBtn').parentElement.hidden=true; $('doneBtn').hidden=false;
+    playAlarm();
+  }
+}
+$('pauseBtn').onclick=()=>{
+  if(tvPausedLeft==null){tvPausedLeft=(tvEnd-Date.now())/1000;$('pauseBtn').textContent='Resume';$('tvStatus').textContent='Paused';}
+  else{tvEnd=Date.now()+tvPausedLeft*1000;tvPausedLeft=null;store.set('tvEnd',tvEnd);$('pauseBtn').textContent='Pause';$('tvStatus').textContent='Enjoy your show!';}
+};
+$('stopBtn').onclick=()=>{clearInterval(tvTimer);store.set('tvEnd',0);backToPractice()};
+$('doneBtn').onclick=()=>{if(alarmStop)alarmStop();backToPractice()};
+function backToPractice(){
+  $('tv').hidden=true; $('practice').style.display='contents';
+  $('stage').classList.remove('dancing'); $('stage').classList.add('sleepy');
+  $('status').textContent='Bear is sleepy. Play some piano to wake him up!';
+  render();
+}
+
+/* gentle music-box chime, repeats softly for ~30s or until OK */
+function playAlarm(){
+  if(!ctx) return; ctx.resume();
+  const notes=[523.25,659.25,783.99,1046.5,783.99,659.25];
+  let stopped=false, rounds=0;
+  const round=()=>{
+    if(stopped||rounds++>6) return;
+    const t0=ctx.currentTime;
+    notes.forEach((f,i)=>{
+      const o=ctx.createOscillator(), g=ctx.createGain(), t=t0+i*0.35;
+      o.type='sine'; o.frequency.value=f;
+      g.gain.setValueAtTime(0,t); g.gain.linearRampToValueAtTime(0.18,t+0.02); g.gain.exponentialRampToValueAtTime(0.0008,t+1.2);
+      o.connect(g).connect(ctx.destination); o.start(t); o.stop(t+1.3);
+    });
+    setTimeout(round,4500);
+  };
+  round();
+  alarmStop=()=>{stopped=true};
+}
+async function keepAwake(){try{wake=await navigator.wakeLock.request('screen')}catch(e){}}
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&(listening||!$('tv').hidden))keepAwake()});
+
+/* ---------- grown-up panel (press and hold 1.5s) ---------- */
+let holdT=null;
+const gear=$('gear'), gf=$('gearFill');
+const holdStart=e=>{e.preventDefault();gf.style.transition='transform 1.5s linear';gf.style.transform='scaleX(1)';holdT=setTimeout(openPanel,1500)};
+const holdEnd=()=>{clearTimeout(holdT);gf.style.transition='none';gf.style.transform='scaleX(0)'};
+gear.addEventListener('pointerdown',holdStart);
+['pointerup','pointerleave','pointercancel'].forEach(ev=>gear.addEventListener(ev,holdEnd));
+gear.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' ')openPanel()});
+async function openPanel(){
+  holdEnd(); $('panel').hidden=false;
+  $('goalIn').value=goal; $('sensIn').value=sens; $('manualIn').checked=manual;
+  if(!analyser) await startMic();
+}
+$('closeBtn').onclick=()=>{
+  goal=Math.max(1,Math.min(120,parseInt($('goalIn').value)||15)); store.set('goal',goal);
+  sens=+$('sensIn').value; store.set('sens',sens);
+  manual=$('manualIn').checked;
+  $('panel').hidden=true; buildKeys(); render();
+};
+$('sensIn').oninput=e=>{sens=+e.target.value};
+$('resetBtn').onclick=()=>{earned=0;store.set('earned',0);render()};
+$('addBtn').onclick=()=>{earned+=60;store.set('earned',earned);render()};
+
+/* resume an unfinished TV countdown after a reload */
+buildKeys(); render();
+const savedEnd=store.get('tvEnd',0);
+if(savedEnd>Date.now()){tvEnd=savedEnd;showTV()}
+requestAnimationFrame(loop);
+})();
+</script>
+
+</body>
+</html>
