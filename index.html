@@ -65,8 +65,8 @@ h1{font-family:var(--display);font-weight:800;font-size:1.7rem;margin:0;letter-s
 @keyframes zap{to{transform:scale(1.2)}}
 .full .cell{border-color:var(--ok)}.full .nub{background:var(--ok)}
 .barlabel{display:flex;justify-content:space-between;font:700 .95rem var(--body);font-variant-numeric:tabular-nums}
-.controls{display:flex;gap:10px;flex-wrap:wrap;justify-content:center;width:100%}
-.controls .soft{flex:1 1 0;min-width:100px;font-size:1rem}
+.controls{display:grid;grid-template-columns:1fr 1fr;gap:10px;width:100%}
+.controls .soft{font-size:1rem;min-width:0}
 .soft:disabled{opacity:.45;cursor:default}
 .soft.tv{background:var(--tv);color:#fff;border-color:var(--tv)}
 .soft.warn{background:var(--lit2);color:#fff;border-color:var(--lit2)}
@@ -140,6 +140,7 @@ h1{font-family:var(--display);font-weight:800;font-size:1.7rem;margin:0;letter-s
     <div class="controls">
       <button class="soft" id="gear">Settings</button>
       <button class="soft" id="resetMain">Reset</button>
+      <button class="soft" id="manualBtn">Start timer</button>
       <button class="soft tv" id="redeemBtn">Redeem for TV</button>
     </div>
   </div>
@@ -164,12 +165,13 @@ h1{font-family:var(--display);font-weight:800;font-size:1.7rem;margin:0;letter-s
     <label>Practice goal (minutes)
       <input type="number" id="goalIn" min="1" max="120" value="15">
     </label>
-    <label>Hearing sensitivity
+    <label>How strict Bear is
       <input type="range" id="sensIn" min="1" max="10" value="5">
-      <small>Play a note: the green bar should cross the orange line. Talking should mostly stay under it.</small>
+      <small>Lower = counts quiet or far-away playing. Higher = ignores more talking and noise. While she plays, the green bar should cross the orange line; when people talk, it should stay under.</small>
       <div class="meter"><i id="meterFill"></i><b id="meterLine"></b></div>
+      <small id="hear" style="font-variant-numeric:tabular-nums">Tap Ready to play! to start listening.</small>
     </label>
-    <label style="flex-direction:row;align-items:center;gap:10px"><input type="checkbox" id="manualIn"> Count time without the microphone</label>
+    <div class="note-box" id="modeNote">Loading the sound model…</div>
     <div class="note-box" id="micNote" hidden></div>
     <div class="row" style="justify-content:space-between">
       <button class="soft" id="addBtn">+1 minute</button>
@@ -184,8 +186,8 @@ const $=id=>document.getElementById(id);
 const store={get(k,d){try{const v=localStorage.getItem('pb_'+k);return v==null?d:JSON.parse(v)}catch(e){return d}},
              set(k,v){try{localStorage.setItem('pb_'+k,JSON.stringify(v))}catch(e){}}};
 
-let goal=store.get('goal',15), sens=store.get('sens',5), earned=store.get('earned',0), manual=false;
-let ctx=null, analyser=null, td=null, fd=null, listening=false, lastHit=0, lastTick=0, level=0;
+let goal=store.get('goal',15), strict=store.get('strict',5), earned=store.get('earned',0), manualOn=false;
+let ctx=null, analyser=null, td=null, fd=null, listening=false, lastHit=-1e9, lastTick=0, level=0;
 let tvEnd=0, tvPausedLeft=null, tvTimer=null, alarmStop=null, wake=null;
 
 /* ---------- energy bar ---------- */
@@ -203,10 +205,83 @@ function render(){
   $('redeemBtn').classList.toggle('redeem',full);
   $('redeemBtn').textContent=earned<60?'Redeem for TV':'TV: '+Math.floor(earned/60)+' min';
   $('startBtn').hidden=listening;
+  $('manualBtn').textContent=manualOn?'Stop timer':'Start timer';
+  $('manualBtn').classList.toggle('warn',manualOn);
 }
 
-/* ---------- listening ---------- */
+/* ---------- smart listening: YAMNet sound classifier (MediaPipe) ---------- */
+const PIANO=['Piano','Keyboard (musical)','Electric piano'];
+const MUSIC=['Music','Musical instrument'];
+const SPEECH=['Speech','Child speech, kid speaking','Conversation','Narration, monologue','Babbling'];
+let classifier=null, mode='loading';          // 'loading' | 'smart' | 'basic'
+let scores={piano:0,music:0,speech:0}, hits=[];
+const modelReady=(async()=>{
+  try{
+    const base=new URL('vendor/mediapipe/',location.href).href;
+    const {FilesetResolver,AudioClassifier}=await import(base+'audio_bundle.mjs');
+    const files=await FilesetResolver.forAudioTasks(base+'wasm');
+    classifier=await AudioClassifier.createFromOptions(files,{
+      baseOptions:{modelAssetPath:new URL('vendor/yamnet.tflite',location.href).href},
+      categoryAllowlist:[...PIANO,...MUSIC,...SPEECH], maxResults:-1});
+    mode='smart';
+  }catch(e){ console.warn('Sound model unavailable, using basic listening',e); mode='basic'; }
+  updateModeNote();
+})();
+function updateModeNote(){
+  $('modeNote').textContent = mode==='smart' ? 'Smart listening is on: Bear uses a sound model to tell piano from talking.'
+    : mode==='basic' ? 'Basic listening: the sound model could not load, so Bear listens for clear notes. Reload on good Wi-Fi to try again.'
+    : 'Loading the sound model…';
+}
+function threshold(){ return 0.05+strict*0.04; }          // strictness 1..10 -> 0.09..0.45
+function judge(sc){
+  const inst=Math.max(sc.piano, sc.music*0.8);
+  return inst>=threshold() && !(sc.speech>0.5 && sc.speech>inst*2);
+}
+function classifyChunk(chunk,rate){
+  let res; try{ res=classifier.classify(chunk,rate); }catch(e){ return; }
+  const sc={piano:0,music:0,speech:0};
+  for(const r of res){ for(const c of (r.classifications[0]||{categories:[]}).categories){
+    const k=PIANO.includes(c.categoryName)?'piano':MUSIC.includes(c.categoryName)?'music':SPEECH.includes(c.categoryName)?'speech':null;
+    if(k && c.score>sc[k]) sc[k]=c.score;
+  }}
+  scores=sc; if(window.pbDebug) window.pbDebug.push([Math.round(performance.now()),sc]);
+  hits.push(judge(sc)); if(hits.length>3) hits.shift();
+  if(hits.filter(Boolean).length>=2 && hits[hits.length-1]) lastHit=performance.now();
+}
+function startSmart(src){
+  const rate=ctx.sampleRate, win=Math.round(rate*1.0), hop=Math.round(rate*0.5);
+  const buf=new Float32Array(win); let filled=0, sinceHop=0;
+  const sp=ctx.createScriptProcessor(4096,1,1), mute=ctx.createGain(); mute.gain.value=0;
+  sp.onaudioprocess=e=>{
+    if(!listening && $('panel').hidden) return;
+    const x=e.inputBuffer.getChannelData(0), n=x.length;
+    if(n>=win){ buf.set(x.subarray(n-win)); filled=win; }
+    else { buf.copyWithin(0,n); buf.set(x,win-n); filled=Math.min(win,filled+n); }
+    sinceHop+=n;
+    if(filled===win && sinceHop>=hop){ sinceHop=0; const chunk=buf.slice(); setTimeout(()=>classifyChunk(chunk,rate),0); }
+  };
+  src.connect(sp); sp.connect(mute); mute.connect(ctx.destination);
+}
+
+/* ---------- basic listening (fallback) ---------- */
+function hearsPiano(){
+  if(!analyser) return false;
+  analyser.getFloatTimeDomainData(td);
+  let s=0; for(let i=0;i<td.length;i++) s+=td[i]*td[i];
+  const rms=Math.sqrt(s/td.length);
+  level=Math.min(1,rms*12);
+  const sens=11-strict, thresh=0.11-sens*0.01;
+  if(level<thresh*12*0.5) return false;
+  analyser.getFloatFrequencyData(fd);
+  const hz=ctx.sampleRate/analyser.fftSize, lo=Math.floor(50/hz), hi=Math.floor(4200/hz);
+  let max=-Infinity, sum=0;
+  for(let i=lo;i<hi;i++){const v=fd[i]; if(v>max)max=v; sum+=v}
+  return (max-sum/(hi-lo))>28;
+}
+
+let micOn=false;
 async function startMic(){
+  if(micOn) return true;
   if(!ctx) ctx=new (window.AudioContext||window.webkitAudioContext)();
   if(ctx.state==='suspended') await ctx.resume();
   try{
@@ -215,53 +290,66 @@ async function startMic(){
     analyser=ctx.createAnalyser(); analyser.fftSize=4096; analyser.smoothingTimeConstant=0.3;
     src.connect(analyser);
     td=new Float32Array(analyser.fftSize); fd=new Float32Array(analyser.frequencyBinCount);
-    return true;
+    $('status').textContent='Getting Bear’s ears ready…';
+    await Promise.race([modelReady,new Promise(r=>setTimeout(r,20000))]);
+    if(mode==='loading'){ mode='basic'; updateModeNote(); }
+    if(mode==='smart') startSmart(src);
+    micOn=true; return true;
   }catch(e){
     $('micNote').hidden=false;
-    $('micNote').textContent="The microphone isn't available here. Open the page in Safari or Chrome to let Bear listen, or tick “Count time without the microphone” while she plays.";
+    $('micNote').textContent="The microphone isn't available here. Allow microphone access in the browser, or use Start timer while she plays.";
     return false;
   }
 }
-function hearsPiano(){
-  if(!analyser) return false;
-  analyser.getFloatTimeDomainData(td);
-  let s=0; for(let i=0;i<td.length;i++) s+=td[i]*td[i];
-  const rms=Math.sqrt(s/td.length);
-  level=Math.min(1,rms*12);
-  const thresh=0.11-sens*0.01;          // sensitivity 1..10 -> loudness gate
-  if(level<thresh*12*0.5) return false;
-  analyser.getFloatFrequencyData(fd);
-  const hz=ctx.sampleRate/analyser.fftSize, lo=Math.floor(50/hz), hi=Math.floor(4200/hz);
-  let max=-Infinity, sum=0;
-  for(let i=lo;i<hi;i++){const v=fd[i]; if(v>max)max=v; sum+=v}
-  const mean=sum/(hi-lo);
-  return (max-mean)>28;                  // piano notes have sharp, clear peaks
-}
-function loop(t){
+
+function loop(){
   const now=performance.now(), dt=lastTick?(now-lastTick)/1000:0; lastTick=now;
-  if(listening){
-    if(manual || hearsPiano()) lastHit=now;
-    const playing=now-lastHit<1600;
+  if(listening && mode!=='smart' && hearsPiano()) lastHit=now;
+  if(mode==='smart' && analyser){ analyser.getFloatTimeDomainData(td); let s=0; for(let i=0;i<td.length;i+=4) s+=td[i]*td[i]; level=Math.min(1,Math.sqrt(s/(td.length/4))*12); }
+  const grace=mode==='smart'?2500:1600;
+  const active=listening||manualOn;
+  if(active){
+    const playing=manualOn || now-lastHit<grace;
     $('stage').classList.toggle('dancing',playing);
     $('stage').classList.toggle('sleepy',!playing);
     $('bar').classList.toggle('charging',playing);
     if(playing && dt<1){ earned+=dt; }
-    $('status').textContent=playing?(earned>=goal*60?'Wow! Extra minutes for even more TV!':'Bear is dancing! Keep playing!'):'Bear is waiting for music…';
+    $('status').textContent=manualOn?'Practice timer is on. Keep playing!'
+      : playing?(earned>=goal*60?'Wow! Extra minutes for even more TV!':'Bear is dancing! Keep playing!')
+      : 'Bear is waiting for music…';
     if(Math.floor(earned)!==Math.floor(earned-dt)) store.set('earned',earned);
     render();
   }
   if(!$('panel').hidden){
-    $('meterFill').style.width=(level*100)+'%';
-    $('meterLine').style.left=Math.min(97,(0.11-sens*0.01)*12*50)+'%';
-    if(!listening && analyser) hearsPiano();
+    if(mode==='smart'){
+      const inst=Math.max(scores.piano,scores.music*0.8);
+      $('meterFill').style.width=Math.min(100,inst*100)+'%';
+      $('meterLine').style.left=Math.min(97,threshold()*100)+'%';
+      $('hear').textContent='Piano '+Math.round(scores.piano*100)+'% · Music '+Math.round(scores.music*100)+'% · Talking '+Math.round(scores.speech*100)+'%';
+    }else{
+      if(!listening && analyser) hearsPiano();
+      const sens=11-strict;
+      $('meterFill').style.width=(level*100)+'%';
+      $('meterLine').style.left=Math.min(97,(0.11-sens*0.01)*600)+'%';
+      $('hear').textContent='Loudness '+Math.round(level*100)+'%';
+    }
   }
   requestAnimationFrame(loop);
 }
 $('startBtn').onclick=async()=>{
   const ok=await startMic();
-  if(!ok && !manual){ openPanel(); return; }
+  if(!ok){ openPanel(); return; }
   listening=true; lastTick=0; render(); keepAwake();
   $('status').textContent='Bear is listening… play something!';
+};
+$('manualBtn').onclick=()=>{
+  manualOn=!manualOn; lastTick=0;
+  if(!manualOn && !listening){
+    $('stage').classList.remove('dancing'); $('stage').classList.add('sleepy'); $('bar').classList.remove('charging');
+    $('status').textContent='Bear is sleepy. Play some piano to wake him up!';
+  }
+  if(manualOn) keepAwake();
+  store.set('earned',earned); render();
 };
 
 /* ---------- TV countdown ---------- */
@@ -269,7 +357,7 @@ $('redeemBtn').onclick=()=>{
   if(!ctx) ctx=new (window.AudioContext||window.webkitAudioContext)();
   ctx.resume();
   const secs=Math.round(earned);
-  earned=0; store.set('earned',0); listening=false; $('bar').classList.remove('charging');
+  earned=0; store.set('earned',0); listening=false; manualOn=false; $('bar').classList.remove('charging');
   tvEnd=Date.now()+secs*1000; tvPausedLeft=null; store.set('tvEnd',tvEnd);
   showTV(); keepAwake();
 };
@@ -341,16 +429,15 @@ $('resetMain').onclick=()=>{
 };
 async function openPanel(){
   $('panel').hidden=false;
-  $('goalIn').value=goal; $('sensIn').value=sens; $('manualIn').checked=manual;
+  $('goalIn').value=goal; $('sensIn').value=strict; updateModeNote();
   if(!analyser) await startMic();
 }
 $('closeBtn').onclick=()=>{
   goal=Math.max(1,Math.min(120,parseInt($('goalIn').value)||15)); store.set('goal',goal);
-  sens=+$('sensIn').value; store.set('sens',sens);
-  manual=$('manualIn').checked;
+  strict=+$('sensIn').value; store.set('strict',strict);
   $('panel').hidden=true; buildKeys(); render();
 };
-$('sensIn').oninput=e=>{sens=+e.target.value};
+$('sensIn').oninput=e=>{strict=+e.target.value};
 $('addBtn').onclick=()=>{earned+=60;store.set('earned',earned);render()};
 
 /* resume an unfinished TV countdown after a reload */
