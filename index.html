@@ -94,6 +94,14 @@ h1{font-family:var(--display);font-weight:800;font-size:1.7rem;margin:0;letter-s
 .meter i{position:absolute;left:0;top:0;bottom:0;background:var(--ok);width:0}
 .meter b{position:absolute;top:0;bottom:0;width:3px;background:var(--lit2)}
 .note-box{background:#fff3d6;border-radius:12px;padding:10px 12px;font-size:.9rem}
+.seg{border:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}
+.seg legend{font-weight:700;padding:0;margin-bottom:6px}
+.seg{flex-direction:row;flex-wrap:wrap}
+.seg label{flex:1 1 0;min-width:0}
+.seg input{position:absolute;opacity:0;pointer-events:none}
+.seg span{display:block;text-align:center;padding:10px 8px;border:2px solid var(--key-edge);border-radius:12px;font-weight:700;cursor:pointer}
+.seg input:checked+span{background:var(--tv);color:#fff;border-color:var(--tv)}
+.seg input:focus-visible+span{outline:3px solid var(--tv);outline-offset:2px}
 @media (prefers-reduced-motion:reduce){.dancing #bear,.dancing #armL,.dancing #armR,.redeem,.dancing .note{animation-duration:2s}}
 </style>
 
@@ -171,6 +179,11 @@ h1{font-family:var(--display);font-weight:800;font-size:1.7rem;margin:0;letter-s
       <div class="meter"><i id="meterFill"></i><b id="meterLine"></b></div>
       <small id="hear" style="font-variant-numeric:tabular-nums">Tap Ready to play! to start listening.</small>
     </label>
+    <fieldset class="seg">
+      <legend>How Bear listens</legend>
+      <label><input type="radio" name="detector" value="smart" id="detSmart"><span>Sound model</span></label>
+      <label><input type="radio" name="detector" value="simple" id="detSimple"><span>Simple rule</span></label>
+    </fieldset>
     <div class="note-box" id="modeNote">Loading the sound model…</div>
     <div class="note-box" id="micNote" hidden></div>
     <div class="row" style="justify-content:space-between">
@@ -210,34 +223,49 @@ function render(){
 }
 
 /* ---------- smart listening: YAMNet sound classifier (MediaPipe) ---------- */
-const PIANO=['Piano','Keyboard (musical)','Electric piano'];
-const MUSIC=['Music','Musical instrument'];
+const PIANO=['Piano','Keyboard (musical)','Electric piano','Harpsichord','Synthesizer'];
+const MUSIC=['Music','Musical instrument','Glockenspiel','Marimba, xylophone','Vibraphone','Tubular bells','Bell','Chime','Tuning fork'];
 const SPEECH=['Speech','Child speech, kid speaking','Conversation','Narration, monologue','Babbling'];
-let classifier=null, mode='loading';          // 'loading' | 'smart' | 'basic'
-let scores={piano:0,music:0,speech:0}, hits=[];
-const modelReady=(async()=>{
-  try{
-    const base=new URL('vendor/mediapipe/',location.href).href;
-    const {FilesetResolver,AudioClassifier}=await import(base+'audio_bundle.mjs');
-    const files=await FilesetResolver.forAudioTasks(base+'wasm');
-    classifier=await AudioClassifier.createFromOptions(files,{
-      baseOptions:{modelAssetPath:new URL('vendor/yamnet.tflite',location.href).href},
-      categoryAllowlist:[...PIANO,...MUSIC,...SPEECH], maxResults:-1});
-    mode='smart';
-  }catch(e){ console.warn('Sound model unavailable, using basic listening',e); mode='basic'; }
-  updateModeNote();
-})();
-function updateModeNote(){
-  $('modeNote').textContent = mode==='smart' ? 'Smart listening is on: Bear uses a sound model to tell piano from talking.'
-    : mode==='basic' ? 'Basic listening: the sound model could not load, so Bear listens for clear notes. Reload on good Wi-Fi to try again.'
-    : 'Loading the sound model…';
+let detector=store.get('detector','smart');        // the grown-up's choice: 'smart' | 'simple'
+let classifier=null, modelState='idle';            // 'idle' | 'loading' | 'ready' | 'failed'
+let scores={piano:0,music:0,speech:0}, hits=[], micSrc=null, smartWired=false;
+let modelPromise=null;
+function loadModel(){
+  if(modelPromise) return modelPromise;
+  modelState='loading'; updateModeNote();
+  modelPromise=(async()=>{
+    try{
+      const base=new URL('vendor/mediapipe/',location.href).href;
+      const {FilesetResolver,AudioClassifier}=await import(base+'audio_bundle.mjs');
+      const files=await FilesetResolver.forAudioTasks(base+'wasm');
+      classifier=await AudioClassifier.createFromOptions(files,{
+        baseOptions:{modelAssetPath:new URL('vendor/yamnet.tflite',location.href).href},
+        categoryAllowlist:[...PIANO,...MUSIC,...SPEECH], maxResults:-1});
+      modelState='ready';
+      if(micSrc) wireSmart();
+    }catch(e){ console.warn('Sound model unavailable',e); modelState='failed'; modelPromise=null; }
+    updateModeNote();
+  })();
+  return modelPromise;
 }
-function threshold(){ return 0.05+strict*0.04; }          // strictness 1..10 -> 0.09..0.45
+function useSmart(){ return detector==='smart' && modelState==='ready'; }
+function updateModeNote(){
+  document.querySelectorAll('[name=detector]').forEach(r=>r.checked=(r.value===detector));
+  $('modeNote').textContent = detector==='simple' ? 'Simple rule: Bear listens for loud, clear notes. Fast, but talking can sometimes count.'
+    : modelState==='ready' ? 'Sound model: Bear tells piano from talking. Reacts about a second after she starts.'
+    : modelState==='failed' ? 'The sound model could not load, so Bear is using the simple rule for now. Reload on good Wi-Fi to try again.'
+    : 'Loading the sound model… Bear uses the simple rule until it is ready.';
+}
+function threshold(){ return 0.02+strict*0.03; }   // strictness 1..10 -> 0.05..0.32 (default 0.17)
 function judge(sc){
-  const inst=Math.max(sc.piano, sc.music*0.8);
-  return inst>=threshold() && !(sc.speech>0.5 && sc.speech>inst*2);
+  const inst=Math.max(sc.piano, sc.music);
+  return inst>=threshold() && !(sc.speech>0.6 && sc.speech>inst*3);
 }
 function classifyChunk(chunk,rate){
+  // Quiet or far-away playing scores low, so boost each window toward a normal level (max 16x).
+  let peak=0; for(let i=0;i<chunk.length;i++){const v=Math.abs(chunk[i]); if(v>peak)peak=v;}
+  if(peak<0.003){ scores={piano:0,music:0,speech:0}; pushHit(false); return; }   // silence
+  const g=Math.min(16,0.5/peak); if(g>1) for(let i=0;i<chunk.length;i++) chunk[i]*=g;
   let res; try{ res=classifier.classify(chunk,rate); }catch(e){ return; }
   const sc={piano:0,music:0,speech:0};
   for(const r of res){ for(const c of (r.classifications[0]||{categories:[]}).categories){
@@ -245,25 +273,29 @@ function classifyChunk(chunk,rate){
     if(k && c.score>sc[k]) sc[k]=c.score;
   }}
   scores=sc; if(window.pbDebug) window.pbDebug.push([Math.round(performance.now()),sc]);
-  hits.push(judge(sc)); if(hits.length>3) hits.shift();
-  if(hits.filter(Boolean).length>=2 && hits[hits.length-1]) lastHit=performance.now();
+  pushHit(judge(sc));
 }
-function startSmart(src){
+function pushHit(h){
+  hits.push(h); if(hits.length>4) hits.shift();
+  if(h && hits.filter(Boolean).length>=2) lastHit=performance.now();   // 2 of the last 4 windows (~2 s)
+}
+function wireSmart(){
+  if(smartWired||!micSrc) return; smartWired=true;
   const rate=ctx.sampleRate, win=Math.round(rate*1.0), hop=Math.round(rate*0.5);
   const buf=new Float32Array(win); let filled=0, sinceHop=0;
   const sp=ctx.createScriptProcessor(4096,1,1), mute=ctx.createGain(); mute.gain.value=0;
   sp.onaudioprocess=e=>{
-    if(!listening && $('panel').hidden) return;
+    if(!useSmart() || (!listening && $('panel').hidden)) return;
     const x=e.inputBuffer.getChannelData(0), n=x.length;
     if(n>=win){ buf.set(x.subarray(n-win)); filled=win; }
     else { buf.copyWithin(0,n); buf.set(x,win-n); filled=Math.min(win,filled+n); }
     sinceHop+=n;
     if(filled===win && sinceHop>=hop){ sinceHop=0; const chunk=buf.slice(); setTimeout(()=>classifyChunk(chunk,rate),0); }
   };
-  src.connect(sp); sp.connect(mute); mute.connect(ctx.destination);
+  micSrc.connect(sp); sp.connect(mute); mute.connect(ctx.destination);
 }
 
-/* ---------- basic listening (fallback) ---------- */
+/* ---------- simple rule: loud + clear pitch ---------- */
 function hearsPiano(){
   if(!analyser) return false;
   analyser.getFloatTimeDomainData(td);
@@ -286,14 +318,11 @@ async function startMic(){
   if(ctx.state==='suspended') await ctx.resume();
   try{
     const stream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:false,noiseSuppression:false,autoGainControl:false}});
-    const src=ctx.createMediaStreamSource(stream);
+    micSrc=ctx.createMediaStreamSource(stream);
     analyser=ctx.createAnalyser(); analyser.fftSize=4096; analyser.smoothingTimeConstant=0.3;
-    src.connect(analyser);
+    micSrc.connect(analyser);
     td=new Float32Array(analyser.fftSize); fd=new Float32Array(analyser.frequencyBinCount);
-    $('status').textContent='Getting Bear’s ears ready…';
-    await Promise.race([modelReady,new Promise(r=>setTimeout(r,20000))]);
-    if(mode==='loading'){ mode='basic'; updateModeNote(); }
-    if(mode==='smart') startSmart(src);
+    if(detector==='smart'){ loadModel(); if(modelState==='ready') wireSmart(); }
     micOn=true; return true;
   }catch(e){
     $('micNote').hidden=false;
@@ -304,9 +333,10 @@ async function startMic(){
 
 function loop(){
   const now=performance.now(), dt=lastTick?(now-lastTick)/1000:0; lastTick=now;
-  if(listening && mode!=='smart' && hearsPiano()) lastHit=now;
-  if(mode==='smart' && analyser){ analyser.getFloatTimeDomainData(td); let s=0; for(let i=0;i<td.length;i+=4) s+=td[i]*td[i]; level=Math.min(1,Math.sqrt(s/(td.length/4))*12); }
-  const grace=mode==='smart'?2500:1600;
+  const smart=useSmart();
+  if(!smart && analyser){ if(hearsPiano() && listening) lastHit=now; }
+  else if(analyser){ analyser.getFloatTimeDomainData(td); let s=0; for(let i=0;i<td.length;i+=4) s+=td[i]*td[i]; level=Math.min(1,Math.sqrt(s/(td.length/4))*12); }
+  const grace=smart?3500:1600;
   const active=listening||manualOn;
   if(active){
     const playing=manualOn || now-lastHit<grace;
@@ -321,17 +351,16 @@ function loop(){
     render();
   }
   if(!$('panel').hidden){
-    if(mode==='smart'){
-      const inst=Math.max(scores.piano,scores.music*0.8);
+    if(smart){
+      const inst=Math.max(scores.piano,scores.music);
       $('meterFill').style.width=Math.min(100,inst*100)+'%';
       $('meterLine').style.left=Math.min(97,threshold()*100)+'%';
       $('hear').textContent='Piano '+Math.round(scores.piano*100)+'% · Music '+Math.round(scores.music*100)+'% · Talking '+Math.round(scores.speech*100)+'%';
     }else{
-      if(!listening && analyser) hearsPiano();
       const sens=11-strict;
       $('meterFill').style.width=(level*100)+'%';
       $('meterLine').style.left=Math.min(97,(0.11-sens*0.01)*600)+'%';
-      $('hear').textContent='Loudness '+Math.round(level*100)+'%';
+      $('hear').textContent=analyser?'Loudness '+Math.round(level*100)+'%':'Tap Ready to play! to start listening.';
     }
   }
   requestAnimationFrame(loop);
@@ -438,6 +467,12 @@ $('closeBtn').onclick=()=>{
   $('panel').hidden=true; buildKeys(); render();
 };
 $('sensIn').oninput=e=>{strict=+e.target.value};
+document.querySelectorAll('[name=detector]').forEach(r=>r.onchange=()=>{
+  detector=r.value; store.set('detector',detector); hits=[]; lastHit=-1e9;
+  if(detector==='smart'){ loadModel(); if(modelState==='ready') wireSmart(); }
+  updateModeNote();
+});
+if(detector==='smart') loadModel(); else updateModeNote();
 $('addBtn').onclick=()=>{earned+=60;store.set('earned',earned);render()};
 
 /* resume an unfinished TV countdown after a reload */
