@@ -52,11 +52,24 @@ h1{font-family:var(--display);font-weight:800;font-size:1.7rem;margin:0;letter-s
 .sleepy #eyes{display:none}.sleepy #eyesClosed{display:inline}
 #eyesClosed{display:none}
 
-.bar{width:100%;background:var(--card);border-radius:18px;padding:12px;display:flex;flex-direction:column;gap:8px;box-shadow:0 6px 0 #00000012}
-.keys{display:flex;gap:3px;height:70px}
-.k{flex:1;background:var(--key);border:2px solid var(--key-edge);border-top:none;border-radius:0 0 8px 8px;position:relative;overflow:hidden}
-.k i{position:absolute;left:0;right:0;bottom:0;height:0;background:linear-gradient(0deg,var(--lit2),var(--lit));transition:height .4s}
+.bar{width:100%;display:flex;flex-direction:column;gap:8px}
+.battery{display:flex;align-items:center;width:100%}
+.cell{flex:1;height:76px;border:6px solid var(--ink);border-radius:18px;background:var(--key);padding:5px;position:relative}
+.nub{width:14px;height:32px;background:var(--ink);border-radius:0 8px 8px 0}
+.juice{height:100%;width:0;border-radius:9px;background:linear-gradient(90deg,#ff7a59,#ffb627 45%,#5fd38d);background-size:calc(100vw) 100%;transition:width .6s ease;position:relative;overflow:hidden;min-width:0}
+.charging .juice::after{content:"";position:absolute;inset:0;background:repeating-linear-gradient(-45deg,#ffffff55 0 14px,transparent 14px 28px);background-size:40px 100%;animation:stripes .8s linear infinite}
+@keyframes stripes{to{background-position:40px 0}}
+.bolt{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;gap:6px;font:800 1.6rem var(--display);color:var(--ink);font-variant-numeric:tabular-nums;pointer-events:none}
+.bolt svg{width:26px;height:34px;opacity:.25;transition:opacity .3s}
+.charging .bolt svg{opacity:1;animation:zap .6s ease-in-out infinite alternate}
+@keyframes zap{to{transform:scale(1.2)}}
+.full .cell{border-color:var(--ok)}.full .nub{background:var(--ok)}
 .barlabel{display:flex;justify-content:space-between;font:700 .95rem var(--body);font-variant-numeric:tabular-nums}
+.controls{display:flex;gap:10px;flex-wrap:wrap;justify-content:center;width:100%}
+.controls .soft{flex:1 1 0;min-width:100px;font-size:1rem}
+.soft:disabled{opacity:.45;cursor:default}
+.soft.tv{background:var(--tv);color:#fff;border-color:var(--tv)}
+.soft.warn{background:var(--lit2);color:#fff;border-color:var(--lit2)}
 
 .big{font-family:var(--display);font-weight:800;font-size:1.6rem;border:none;border-radius:999px;padding:14px 30px;color:#fff;cursor:pointer;box-shadow:0 6px 0 #00000030;transition:transform .1s}
 .big:active{transform:translateY(4px);box-shadow:0 2px 0 #00000030}
@@ -87,7 +100,6 @@ h1{font-family:var(--display);font-weight:800;font-size:1.7rem;margin:0;letter-s
 <div class="app" id="app">
   <div class="top">
     <h1>Piano Bear</h1>
-    <button class="gear" id="gear" aria-label="Grown-up settings (press and hold)"><div class="fill" id="gearFill"></div><span>Grown-ups: hold</span></button>
   </div>
 
   <div id="practice" style="display:contents">
@@ -115,12 +127,21 @@ h1{font-family:var(--display);font-weight:800;font-size:1.7rem;margin:0;letter-s
       </svg>
     </div>
     <div class="status" id="status">Bear is sleepy. Play some piano to wake him up!</div>
-    <div class="bar">
-      <div class="keys" id="keys"></div>
+    <div class="bar" id="bar">
+      <div class="battery" role="progressbar" aria-label="TV time charged" id="battery">
+        <div class="cell"><div class="juice" id="juice"></div>
+          <div class="bolt"><svg viewBox="0 0 24 32"><path d="M14 0 2 18h8l-2 14 14-20h-8z" fill="var(--ink)"/></svg><span id="pct">0%</span></div>
+        </div>
+        <div class="nub"></div>
+      </div>
       <div class="barlabel"><span id="played">0:00 played</span><span id="goalLbl">Goal 15 min</span></div>
     </div>
     <button class="big start" id="startBtn">Ready to play!</button>
-    <button class="big redeem" id="redeemBtn" hidden>Redeem for TV</button>
+    <div class="controls">
+      <button class="soft" id="gear">Settings</button>
+      <button class="soft" id="resetMain">Reset</button>
+      <button class="soft tv" id="redeemBtn">Redeem for TV</button>
+    </div>
   </div>
 
   <div class="tvscreen" id="tv" hidden>
@@ -151,7 +172,6 @@ h1{font-family:var(--display);font-weight:800;font-size:1.7rem;margin:0;letter-s
     <label style="flex-direction:row;align-items:center;gap:10px"><input type="checkbox" id="manualIn"> Count time without the microphone</label>
     <div class="note-box" id="micNote" hidden></div>
     <div class="row" style="justify-content:space-between">
-      <button class="soft" id="resetBtn">Reset minutes</button>
       <button class="soft" id="addBtn">+1 minute</button>
       <button class="big start" id="closeBtn" style="font-size:1.1rem;padding:10px 22px">Done</button>
     </div>
@@ -169,19 +189,20 @@ let ctx=null, analyser=null, td=null, fd=null, listening=false, lastHit=0, lastT
 let tvEnd=0, tvPausedLeft=null, tvTimer=null, alarmStop=null, wake=null;
 
 /* ---------- energy bar ---------- */
-function buildKeys(){
-  const n=Math.min(goal,30), keys=$('keys'); keys.innerHTML='';
-  for(let i=0;i<n;i++){const k=document.createElement('div');k.className='k';k.appendChild(document.createElement('i'));keys.appendChild(k)}
-  $('goalLbl').textContent='Goal '+goal+' min';
-}
+function buildKeys(){ $('goalLbl').textContent='Goal '+goal+' min'; }
 function fmt(s){s=Math.max(0,Math.round(s));return Math.floor(s/60)+':'+String(s%60).padStart(2,'0')}
 function render(){
-  const ks=$('keys').children, n=ks.length, frac=Math.min(1,earned/(goal*60));
-  for(let i=0;i<n;i++){const f=Math.max(0,Math.min(1,frac*n-i));ks[i].firstChild.style.height=(f*100)+'%'}
+  const frac=Math.min(1,earned/(goal*60)), pct=Math.floor(frac*100);
+  $('juice').style.width=(frac*100)+'%';
+  $('pct').textContent=pct+'%';
+  $('battery').setAttribute('aria-valuenow',pct);
   $('played').textContent=fmt(earned)+' played';
   const full=earned>=goal*60;
-  $('redeemBtn').hidden=!full;
-  $('startBtn').hidden=full||listening;
+  $('bar').classList.toggle('full',full);
+  $('redeemBtn').disabled=earned<60;
+  $('redeemBtn').classList.toggle('redeem',full);
+  $('redeemBtn').textContent=earned<60?'Redeem for TV':'TV: '+Math.floor(earned/60)+' min';
+  $('startBtn').hidden=listening;
 }
 
 /* ---------- listening ---------- */
@@ -223,6 +244,7 @@ function loop(t){
     const playing=now-lastHit<1600;
     $('stage').classList.toggle('dancing',playing);
     $('stage').classList.toggle('sleepy',!playing);
+    $('bar').classList.toggle('charging',playing);
     if(playing && dt<1){ earned+=dt; }
     $('status').textContent=playing?(earned>=goal*60?'Wow! Extra minutes for even more TV!':'Bear is dancing! Keep playing!'):'Bear is waiting for music…';
     if(Math.floor(earned)!==Math.floor(earned-dt)) store.set('earned',earned);
@@ -247,7 +269,7 @@ $('redeemBtn').onclick=()=>{
   if(!ctx) ctx=new (window.AudioContext||window.webkitAudioContext)();
   ctx.resume();
   const secs=Math.round(earned);
-  earned=0; store.set('earned',0); listening=false;
+  earned=0; store.set('earned',0); listening=false; $('bar').classList.remove('charging');
   tvEnd=Date.now()+secs*1000; tvPausedLeft=null; store.set('tvEnd',tvEnd);
   showTV(); keepAwake();
 };
@@ -303,16 +325,22 @@ function playAlarm(){
 async function keepAwake(){try{wake=await navigator.wakeLock.request('screen')}catch(e){}}
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&(listening||!$('tv').hidden))keepAwake()});
 
-/* ---------- grown-up panel (press and hold 1.5s) ---------- */
-let holdT=null;
-const gear=$('gear'), gf=$('gearFill');
-const holdStart=e=>{e.preventDefault();gf.style.transition='transform 1.5s linear';gf.style.transform='scaleX(1)';holdT=setTimeout(openPanel,1500)};
-const holdEnd=()=>{clearTimeout(holdT);gf.style.transition='none';gf.style.transform='scaleX(0)'};
-gear.addEventListener('pointerdown',holdStart);
-['pointerup','pointerleave','pointercancel'].forEach(ev=>gear.addEventListener(ev,holdEnd));
-gear.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' ')openPanel()});
+/* ---------- settings + reset ---------- */
+$('gear').onclick=()=>openPanel();
+let resetArm=null;
+$('resetMain').onclick=()=>{
+  const b=$('resetMain');
+  if(!resetArm){
+    b.textContent='Tap again to reset'; b.classList.add('warn');
+    resetArm=setTimeout(()=>{resetArm=null;b.textContent='Reset';b.classList.remove('warn')},3000);
+    return;
+  }
+  clearTimeout(resetArm); resetArm=null; b.textContent='Reset'; b.classList.remove('warn');
+  earned=0; store.set('earned',0); render();
+  $('status').textContent=listening?'Battery is empty. Play to charge it up!':'Bear is sleepy. Play some piano to wake him up!';
+};
 async function openPanel(){
-  holdEnd(); $('panel').hidden=false;
+  $('panel').hidden=false;
   $('goalIn').value=goal; $('sensIn').value=sens; $('manualIn').checked=manual;
   if(!analyser) await startMic();
 }
@@ -323,7 +351,6 @@ $('closeBtn').onclick=()=>{
   $('panel').hidden=true; buildKeys(); render();
 };
 $('sensIn').oninput=e=>{sens=+e.target.value};
-$('resetBtn').onclick=()=>{earned=0;store.set('earned',0);render()};
 $('addBtn').onclick=()=>{earned+=60;store.set('earned',earned);render()};
 
 /* resume an unfinished TV countdown after a reload */
