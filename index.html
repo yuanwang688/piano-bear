@@ -229,7 +229,7 @@ const SPEECH=['Speech','Child speech, kid speaking','Conversation','Narration, m
 let detector=store.get('detector','smart');        // the grown-up's choice: 'smart' | 'simple'
 let classifier=null, modelState='idle';            // 'idle' | 'loading' | 'ready' | 'failed'
 let scores={piano:0,music:0,speech:0}, hits=[], micSrc=null, smartWired=false;
-let modelPromise=null;
+let modelPromise=null, checks=0;
 function loadModel(){
   if(modelPromise) return modelPromise;
   modelState='loading'; updateModeNote();
@@ -256,7 +256,8 @@ function updateModeNote(){
     : modelState==='failed' ? 'The sound model could not load, so Bear is using the simple rule for now. Reload on good Wi-Fi to try again.'
     : 'Loading the sound model… Bear uses the simple rule until it is ready.';
 }
-function threshold(){ return 0.02+strict*0.03; }   // strictness 1..10 -> 0.05..0.32 (default 0.17)
+// Tuned on real clips (test-clips/): her piano scores 0.6-0.99, talking stays under 0.08.
+function threshold(){ return 0.05+strict*0.03; }   // strictness 1..10 -> 0.08..0.35 (default 0.20)
 function judge(sc){
   const inst=Math.max(sc.piano, sc.music);
   return inst>=threshold() && !(sc.speech>0.6 && sc.speech>inst*3);
@@ -272,7 +273,7 @@ function classifyChunk(chunk,rate){
     const k=PIANO.includes(c.categoryName)?'piano':MUSIC.includes(c.categoryName)?'music':SPEECH.includes(c.categoryName)?'speech':null;
     if(k && c.score>sc[k]) sc[k]=c.score;
   }}
-  scores=sc; if(window.pbDebug) window.pbDebug.push([Math.round(performance.now()),sc]);
+  scores=sc; checks++; if(window.pbDebug) window.pbDebug.push([Math.round(performance.now()),sc]);
   pushHit(judge(sc));
 }
 function pushHit(h){
@@ -336,7 +337,7 @@ function loop(){
   const smart=useSmart();
   if(!smart && analyser){ if(hearsPiano() && listening) lastHit=now; }
   else if(analyser){ analyser.getFloatTimeDomainData(td); let s=0; for(let i=0;i<td.length;i+=4) s+=td[i]*td[i]; level=Math.min(1,Math.sqrt(s/(td.length/4))*12); }
-  const grace=smart?3500:1600;
+  const grace=smart?2500:1600;   // her pauses between phrases are under 2 s
   const active=listening||manualOn;
   if(active){
     const playing=manualOn || now-lastHit<grace;
@@ -355,7 +356,7 @@ function loop(){
       const inst=Math.max(scores.piano,scores.music);
       $('meterFill').style.width=Math.min(100,inst*100)+'%';
       $('meterLine').style.left=Math.min(97,threshold()*100)+'%';
-      $('hear').textContent='Piano '+Math.round(scores.piano*100)+'% · Music '+Math.round(scores.music*100)+'% · Talking '+Math.round(scores.speech*100)+'%';
+      $('hear').textContent='Piano '+Math.round(scores.piano*100)+'% · Music '+Math.round(scores.music*100)+'% · Talking '+Math.round(scores.speech*100)+'% · '+checks+' checks';
     }else{
       const sens=11-strict;
       $('meterFill').style.width=(level*100)+'%';
