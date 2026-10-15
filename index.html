@@ -30,6 +30,7 @@ h1{font-family:var(--display);font-weight:800;font-size:1.7rem;margin:0;letter-s
 .gear{font:600 .8rem var(--body);background:var(--card);border:2px solid var(--key-edge);border-radius:999px;padding:8px 12px;color:var(--ink);position:relative;overflow:hidden;cursor:pointer;touch-action:none}
 .gear .fill{position:absolute;inset:0;background:var(--sky2);transform-origin:left;transform:scaleX(0)}
 .gear span{position:relative}
+.nametag{font-family:var(--display);font-weight:800;font-size:1.15rem;color:#fff;background:var(--honey);border:3px solid var(--honey-dk);border-radius:999px;padding:2px 16px;margin-top:-18px;box-shadow:0 3px 0 #00000020;position:relative;z-index:1}
 .status{font:700 1rem var(--body);min-height:1.4em;text-align:center}
 
 .stage{position:relative;width:min(300px,78vw);aspect-ratio:1;max-width:100%}
@@ -113,7 +114,7 @@ h1{font-family:var(--display);font-weight:800;font-size:1.7rem;margin:0;letter-s
   <div id="practice" style="display:contents">
     <div class="stage sleepy" id="stage">
       <span class="note">♪</span><span class="note">♫</span><span class="note">♪</span>
-      <svg viewBox="0 0 300 300" aria-label="Teddy bear">
+      <svg viewBox="0 0 300 300" aria-label="Honey Bear">
         <ellipse cx="150" cy="285" rx="80" ry="10" fill="#00000018"/>
         <g id="bear">
           <ellipse cx="110" cy="262" rx="28" ry="20" fill="var(--honey-dk)"/>
@@ -134,7 +135,8 @@ h1{font-family:var(--display);font-weight:800;font-size:1.7rem;margin:0;letter-s
         </g>
       </svg>
     </div>
-    <div class="status" id="status">Bear is sleepy. Play some piano to wake him up!</div>
+    <div class="nametag">Honey Bear</div>
+    <div class="status" id="status">Honey Bear is sleepy. Play some piano to wake him up!</div>
     <div class="bar" id="bar">
       <div class="battery" role="progressbar" aria-label="TV time charged" id="battery">
         <div class="cell"><div class="juice" id="juice"></div>
@@ -173,14 +175,14 @@ h1{font-family:var(--display);font-weight:800;font-size:1.7rem;margin:0;letter-s
     <label>Practice goal (minutes)
       <input type="number" id="goalIn" min="1" max="120" value="15">
     </label>
-    <label>How strict Bear is
+    <label>How strict Honey Bear is
       <input type="range" id="sensIn" min="1" max="10" value="5">
       <small>Lower = counts quiet or far-away playing. Higher = ignores more talking and noise. While she plays, the green bar should cross the orange line; when people talk, it should stay under.</small>
       <div class="meter"><i id="meterFill"></i><b id="meterLine"></b></div>
       <small id="hear" style="font-variant-numeric:tabular-nums">Tap Ready to play! to start listening.</small>
     </label>
     <fieldset class="seg">
-      <legend>How Bear listens</legend>
+      <legend>How Honey Bear listens</legend>
       <label><input type="radio" name="detector" value="smart" id="detSmart"><span>Sound model</span></label>
       <label><input type="radio" name="detector" value="simple" id="detSimple"><span>Simple rule</span></label>
     </fieldset>
@@ -251,10 +253,10 @@ function loadModel(){
 function useSmart(){ return detector==='smart' && modelState==='ready'; }
 function updateModeNote(){
   document.querySelectorAll('[name=detector]').forEach(r=>r.checked=(r.value===detector));
-  $('modeNote').textContent = detector==='simple' ? 'Simple rule: Bear listens for loud, clear notes. Fast, but talking can sometimes count.'
-    : modelState==='ready' ? 'Sound model: Bear tells piano from talking. Reacts about a second after she starts.'
-    : modelState==='failed' ? 'The sound model could not load, so Bear is using the simple rule for now. Reload on good Wi-Fi to try again.'
-    : 'Loading the sound model… Bear uses the simple rule until it is ready.';
+  $('modeNote').textContent = detector==='simple' ? 'Simple rule: Honey Bear listens for loud, clear notes. Fast, but talking can sometimes count.'
+    : modelState==='ready' ? 'Sound model: Honey Bear tells piano from talking. Reacts about a second after she starts.'
+    : modelState==='failed' ? 'The sound model could not load, so Honey Bear is using the simple rule for now. Reload on good Wi-Fi to try again.'
+    : 'Loading the sound model… Honey Bear uses the simple rule until it is ready.';
 }
 // Tuned on real clips (test-clips/): her piano scores 0.6-0.99, talking stays under 0.08.
 function threshold(){ return 0.05+strict*0.03; }   // strictness 1..10 -> 0.08..0.35 (default 0.20)
@@ -346,8 +348,8 @@ function loop(){
     $('bar').classList.toggle('charging',playing);
     if(playing && dt<1){ earned+=dt; }
     $('status').textContent=manualOn?'Practice timer is on. Keep playing!'
-      : playing?(earned>=goal*60?'Wow! Extra minutes for even more TV!':'Bear is dancing! Keep playing!')
-      : 'Bear is waiting for music…';
+      : playing?(earned>=goal*60?'Wow! Extra minutes for even more TV!':'Honey Bear is dancing! Keep playing!')
+      : 'Honey Bear is waiting for music…';
     if(Math.floor(earned)!==Math.floor(earned-dt)) store.set('earned',earned);
     render();
   }
@@ -370,13 +372,13 @@ $('startBtn').onclick=async()=>{
   const ok=await startMic();
   if(!ok){ openPanel(); return; }
   listening=true; lastTick=0; render(); keepAwake();
-  $('status').textContent='Bear is listening… play something!';
+  $('status').textContent='Honey Bear is listening… play something!';
 };
 $('manualBtn').onclick=()=>{
   manualOn=!manualOn; lastTick=0;
   if(!manualOn && !listening){
     $('stage').classList.remove('dancing'); $('stage').classList.add('sleepy'); $('bar').classList.remove('charging');
-    $('status').textContent='Bear is sleepy. Play some piano to wake him up!';
+    $('status').textContent='Honey Bear is sleepy. Play some piano to wake him up!';
   }
   if(manualOn) keepAwake();
   store.set('earned',earned); render();
@@ -417,7 +419,7 @@ $('doneBtn').onclick=()=>{if(alarmStop)alarmStop();backToPractice()};
 function backToPractice(){
   $('tv').hidden=true; $('practice').style.display='contents';
   $('stage').classList.remove('dancing'); $('stage').classList.add('sleepy');
-  $('status').textContent='Bear is sleepy. Play some piano to wake him up!';
+  $('status').textContent='Honey Bear is sleepy. Play some piano to wake him up!';
   render();
 }
 
@@ -455,7 +457,7 @@ $('resetMain').onclick=()=>{
   }
   clearTimeout(resetArm); resetArm=null; b.textContent='Reset'; b.classList.remove('warn');
   earned=0; store.set('earned',0); render();
-  $('status').textContent=listening?'Battery is empty. Play to charge it up!':'Bear is sleepy. Play some piano to wake him up!';
+  $('status').textContent=listening?'Battery is empty. Play to charge it up!':'Honey Bear is sleepy. Play some piano to wake him up!';
 };
 async function openPanel(){
   $('panel').hidden=false;
