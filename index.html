@@ -47,7 +47,7 @@ h1{font-family:var(--display);font-weight:800;font-size:1.7rem;margin:0;letter-s
 .dancing #armL{animation:waveL .5s ease-in-out infinite alternate}
 .dancing #armR{animation:waveR .5s ease-in-out infinite alternate}
 .spark{transform-box:fill-box;transform-origin:center;animation:twinkle 1.6s ease-in-out infinite}
-.spark:nth-of-type(2){animation-delay:.5s}.spark:nth-of-type(3){animation-delay:1s}
+.spark:nth-of-type(3n+2){animation-delay:.5s}.spark:nth-of-type(3n){animation-delay:1s}
 @keyframes twinkle{0%,100%{opacity:.2;transform:scale(.5)}50%{opacity:1;transform:scale(1.15)}}
 #wingL{transform-origin:146px 180px;animation:flutterL 2.4s ease-in-out infinite}
 #wingR .wingInner{transform-origin:146px 180px;animation:flutterL 2.4s ease-in-out infinite}
@@ -123,21 +123,21 @@ h1{font-family:var(--display);font-weight:800;font-size:1.7rem;margin:0;letter-s
       <span class="note">♪</span><span class="note">♫</span><span class="note">♪</span>
       <svg viewBox="0 0 300 300" aria-label="Honey Bear">
         <ellipse cx="150" cy="285" rx="80" ry="10" fill="#00000018"/>
-        <defs><linearGradient id="wingGrad" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#f7e9ff"/><stop offset=".55" stop-color="#d7c4ff"/><stop offset="1" stop-color="#ffc4e3"/></linearGradient></defs>
+        <defs><linearGradient id="wingGrad" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ffffff"/><stop offset=".6" stop-color="#f6f9ff"/><stop offset="1" stop-color="#eef3fb"/></linearGradient></defs>
         <g id="bear">
           <g id="wings" transform="translate(150 168) scale(1.55) translate(-150 -180)">
             <g class="wing" id="wingL">
-            <path d="M146 172 C120 120 60 70 34 96 C14 118 40 160 82 172 C104 178 128 178 146 176 Z" fill="url(#wingGrad)" stroke="#9a7fe0" stroke-width="3" stroke-linejoin="round"/>
-            <path d="M146 182 C116 188 70 206 62 232 C56 254 86 262 108 244 C124 230 138 206 148 188 Z" fill="url(#wingGrad)" stroke="#9a7fe0" stroke-width="3" stroke-linejoin="round"/>
-            <path d="M138 172 C112 140 80 112 56 104 M140 186 C118 200 96 218 82 238" stroke="#bba3f2" stroke-width="2.5" fill="none" stroke-linecap="round"/>
-            <circle cx="62" cy="122" r="3" fill="#fff"/><circle cx="84" cy="146" r="2.2" fill="#fff"/><circle cx="80" cy="226" r="2.5" fill="#fff"/>
+            <path d="M146 172 C120 120 60 70 34 96 C14 118 40 160 82 172 C104 178 128 178 146 176 Z" fill="url(#wingGrad)" stroke="#9fb4d4" stroke-width="3" stroke-linejoin="round"/>
+            <path d="M146 182 C116 188 70 206 62 232 C56 254 86 262 108 244 C124 230 138 206 148 188 Z" fill="url(#wingGrad)" stroke="#9fb4d4" stroke-width="3" stroke-linejoin="round"/>
+            <path d="M138 172 C112 140 80 112 56 104 M140 186 C118 200 96 218 82 238" stroke="#d3deee" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+            <path class="spark" d="M62 109 Q62 118 71 118 Q62 118 62 127 Q62 118 53 118 Q62 118 62 109Z" fill="#fff3b8" stroke="#c9b26a" stroke-width=".6"/><path class="spark" d="M92 144 Q92 150 98 150 Q92 150 92 156 Q92 150 86 150 Q92 150 92 144Z" fill="#ffd9ec" stroke="#c9b26a" stroke-width=".6"/><path class="spark" d="M46 141 Q46 146 51 146 Q46 146 46 151 Q46 146 41 146 Q46 146 46 141Z" fill="#dcecff" stroke="#c9b26a" stroke-width=".6"/><path class="spark" d="M110 125 Q110 130 115 130 Q110 130 110 135 Q110 130 105 130 Q110 130 110 125Z" fill="#fff3b8" stroke="#c9b26a" stroke-width=".6"/><path class="spark" d="M78 93.5 Q78 98 82.5 98 Q78 98 78 102.5 Q78 98 73.5 98 Q78 98 78 93.5Z" fill="#ffd9ec" stroke="#c9b26a" stroke-width=".6"/><path class="spark" d="M124 152 Q124 156 128 156 Q124 156 124 160 Q124 156 120 156 Q124 156 124 152Z" fill="#dcecff" stroke="#c9b26a" stroke-width=".6"/><path class="spark" d="M80 219 Q80 226 87 226 Q80 226 80 233 Q80 226 73 226 Q80 226 80 219Z" fill="#ffd9ec" stroke="#c9b26a" stroke-width=".6"/><path class="spark" d="M104 201 Q104 206 109 206 Q104 206 104 211 Q104 206 99 206 Q104 206 104 201Z" fill="#fff3b8" stroke="#c9b26a" stroke-width=".6"/><path class="spark" d="M68 243.5 Q68 248 72.5 248 Q68 248 68 252.5 Q68 248 63.5 248 Q68 248 68 243.5Z" fill="#dcecff" stroke="#c9b26a" stroke-width=".6"/><path class="spark" d="M118 186.5 Q118 190 121.5 190 Q118 190 118 193.5 Q118 190 114.5 190 Q118 190 118 186.5Z" fill="#ffd9ec" stroke="#c9b26a" stroke-width=".6"/>
             </g>
             <g class="wing" id="wingR" transform="translate(300 0) scale(-1 1)">
             <g class="wingInner">
-            <path d="M146 172 C120 120 60 70 34 96 C14 118 40 160 82 172 C104 178 128 178 146 176 Z" fill="url(#wingGrad)" stroke="#9a7fe0" stroke-width="3" stroke-linejoin="round"/>
-            <path d="M146 182 C116 188 70 206 62 232 C56 254 86 262 108 244 C124 230 138 206 148 188 Z" fill="url(#wingGrad)" stroke="#9a7fe0" stroke-width="3" stroke-linejoin="round"/>
-            <path d="M138 172 C112 140 80 112 56 104 M140 186 C118 200 96 218 82 238" stroke="#bba3f2" stroke-width="2.5" fill="none" stroke-linecap="round"/>
-            <circle cx="62" cy="122" r="3" fill="#fff"/><circle cx="84" cy="146" r="2.2" fill="#fff"/><circle cx="80" cy="226" r="2.5" fill="#fff"/>
+            <path d="M146 172 C120 120 60 70 34 96 C14 118 40 160 82 172 C104 178 128 178 146 176 Z" fill="url(#wingGrad)" stroke="#9fb4d4" stroke-width="3" stroke-linejoin="round"/>
+            <path d="M146 182 C116 188 70 206 62 232 C56 254 86 262 108 244 C124 230 138 206 148 188 Z" fill="url(#wingGrad)" stroke="#9fb4d4" stroke-width="3" stroke-linejoin="round"/>
+            <path d="M138 172 C112 140 80 112 56 104 M140 186 C118 200 96 218 82 238" stroke="#d3deee" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+            <path class="spark" d="M62 109 Q62 118 71 118 Q62 118 62 127 Q62 118 53 118 Q62 118 62 109Z" fill="#fff3b8" stroke="#c9b26a" stroke-width=".6"/><path class="spark" d="M92 144 Q92 150 98 150 Q92 150 92 156 Q92 150 86 150 Q92 150 92 144Z" fill="#ffd9ec" stroke="#c9b26a" stroke-width=".6"/><path class="spark" d="M46 141 Q46 146 51 146 Q46 146 46 151 Q46 146 41 146 Q46 146 46 141Z" fill="#dcecff" stroke="#c9b26a" stroke-width=".6"/><path class="spark" d="M110 125 Q110 130 115 130 Q110 130 110 135 Q110 130 105 130 Q110 130 110 125Z" fill="#fff3b8" stroke="#c9b26a" stroke-width=".6"/><path class="spark" d="M78 93.5 Q78 98 82.5 98 Q78 98 78 102.5 Q78 98 73.5 98 Q78 98 78 93.5Z" fill="#ffd9ec" stroke="#c9b26a" stroke-width=".6"/><path class="spark" d="M124 152 Q124 156 128 156 Q124 156 124 160 Q124 156 120 156 Q124 156 124 152Z" fill="#dcecff" stroke="#c9b26a" stroke-width=".6"/><path class="spark" d="M80 219 Q80 226 87 226 Q80 226 80 233 Q80 226 73 226 Q80 226 80 219Z" fill="#ffd9ec" stroke="#c9b26a" stroke-width=".6"/><path class="spark" d="M104 201 Q104 206 109 206 Q104 206 104 211 Q104 206 99 206 Q104 206 104 201Z" fill="#fff3b8" stroke="#c9b26a" stroke-width=".6"/><path class="spark" d="M68 243.5 Q68 248 72.5 248 Q68 248 68 252.5 Q68 248 63.5 248 Q68 248 68 243.5Z" fill="#dcecff" stroke="#c9b26a" stroke-width=".6"/><path class="spark" d="M118 186.5 Q118 190 121.5 190 Q118 190 118 193.5 Q118 190 114.5 190 Q118 190 118 186.5Z" fill="#ffd9ec" stroke="#c9b26a" stroke-width=".6"/>
             </g>
             </g>
           </g>
