@@ -132,7 +132,7 @@ h1{font-family:var(--display);font-weight:800;font-size:1.7rem;margin:0;letter-s
           <g id="eyes"><circle cx="126" cy="100" r="7" fill="var(--ink)"/><circle cx="174" cy="100" r="7" fill="var(--ink)"/><circle cx="128" cy="98" r="2" fill="#fff"/><circle cx="176" cy="98" r="2" fill="#fff"/></g>
           <g id="eyesClosed" stroke="var(--ink)" stroke-width="4" fill="none" stroke-linecap="round"><path d="M118 102 Q126 96 134 102"/><path d="M166 102 Q174 96 182 102"/></g>
           <circle cx="112" cy="122" r="8" fill="#f29a8e" opacity=".6"/><circle cx="188" cy="122" r="8" fill="#f29a8e" opacity=".6"/>
-          <g id="bowtie">
+          <g id="bowtie" transform="translate(186 64) rotate(25) scale(.72) translate(-150 -176)">
             <path d="M150 176 L112 156 Q104 176 112 196 Z" fill="#e2445c" stroke="#a82640" stroke-width="3" stroke-linejoin="round"/>
             <path d="M150 176 L188 156 Q196 176 188 196 Z" fill="#e2445c" stroke="#a82640" stroke-width="3" stroke-linejoin="round"/>
             <circle cx="122" cy="168" r="3.5" fill="#fff" opacity=".85"/><circle cx="121" cy="184" r="3.5" fill="#fff" opacity=".85"/>
@@ -143,7 +143,7 @@ h1{font-family:var(--display);font-weight:800;font-size:1.7rem;margin:0;letter-s
       </svg>
     </div>
     <div class="nametag">Honey Bear</div>
-    <div class="status" id="status">Honey Bear is sleepy. Play some piano to wake him up!</div>
+    <div class="status" id="status">Honey Bear is sleepy. Play some piano to wake her up!</div>
     <div class="bar" id="bar">
       <div class="battery" role="progressbar" aria-label="TV time charged" id="battery">
         <div class="cell"><div class="juice" id="juice"></div>
@@ -385,7 +385,7 @@ $('manualBtn').onclick=()=>{
   manualOn=!manualOn; lastTick=0;
   if(!manualOn && !listening){
     $('stage').classList.remove('dancing'); $('stage').classList.add('sleepy'); $('bar').classList.remove('charging');
-    $('status').textContent='Honey Bear is sleepy. Play some piano to wake him up!';
+    $('status').textContent='Honey Bear is sleepy. Play some piano to wake her up!';
   }
   if(manualOn) keepAwake();
   store.set('earned',earned); render();
@@ -426,7 +426,7 @@ $('doneBtn').onclick=()=>{if(alarmStop)alarmStop();backToPractice()};
 function backToPractice(){
   $('tv').hidden=true; $('practice').style.display='contents';
   $('stage').classList.remove('dancing'); $('stage').classList.add('sleepy');
-  $('status').textContent='Honey Bear is sleepy. Play some piano to wake him up!';
+  $('status').textContent='Honey Bear is sleepy. Play some piano to wake her up!';
   render();
 }
 
@@ -464,7 +464,7 @@ $('resetMain').onclick=()=>{
   }
   clearTimeout(resetArm); resetArm=null; b.textContent='Reset'; b.classList.remove('warn');
   earned=0; store.set('earned',0); render();
-  $('status').textContent=listening?'Battery is empty. Play to charge it up!':'Honey Bear is sleepy. Play some piano to wake him up!';
+  $('status').textContent=listening?'Battery is empty. Play to charge it up!':'Honey Bear is sleepy. Play some piano to wake her up!';
 };
 async function openPanel(){
   $('panel').hidden=false;
