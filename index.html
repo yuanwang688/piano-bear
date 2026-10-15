@@ -49,6 +49,10 @@ h1{font-family:var(--display);font-weight:800;font-size:1.7rem;margin:0;letter-s
 .spark{transform-box:fill-box;transform-origin:center;animation:twinkle 1.6s ease-in-out infinite}
 .spark:nth-of-type(2){animation-delay:.5s}.spark:nth-of-type(3){animation-delay:1s}
 @keyframes twinkle{0%,100%{opacity:.2;transform:scale(.5)}50%{opacity:1;transform:scale(1.15)}}
+#wingL{transform-origin:146px 180px;animation:flutterL 2.4s ease-in-out infinite}
+#wingR .wingInner{transform-origin:146px 180px;animation:flutterL 2.4s ease-in-out infinite}
+.dancing #wingL,.dancing #wingR .wingInner{animation-duration:.35s}
+@keyframes flutterL{0%,100%{transform:rotate(0deg) scaleX(1)}50%{transform:rotate(6deg) scaleX(.88)}}
 #armL{transform-origin:95px 175px}#armR{transform-origin:205px 175px}
 @keyframes bop{from{transform:translateY(0) rotate(-6deg)}to{transform:translateY(-14px) rotate(6deg)}}
 @keyframes waveL{from{transform:rotate(20deg)}to{transform:rotate(-55deg)}}
@@ -106,7 +110,7 @@ h1{font-family:var(--display);font-weight:800;font-size:1.7rem;margin:0;letter-s
 .seg span{display:block;text-align:center;padding:10px 8px;border:2px solid var(--key-edge);border-radius:12px;font-weight:700;cursor:pointer}
 .seg input:checked+span{background:var(--tv);color:#fff;border-color:var(--tv)}
 .seg input:focus-visible+span{outline:3px solid var(--tv);outline-offset:2px}
-@media (prefers-reduced-motion:reduce){.dancing #bear,.dancing #armL,.dancing #armR,.redeem,.dancing .note,.spark{animation-duration:2s}}
+@media (prefers-reduced-motion:reduce){.dancing #bear,.dancing #armL,.dancing #armR,.redeem,.dancing .note,.spark,#wingL,#wingR .wingInner{animation-duration:2s!important}}
 </style>
 
 <div class="app" id="app">
@@ -119,7 +123,24 @@ h1{font-family:var(--display);font-weight:800;font-size:1.7rem;margin:0;letter-s
       <span class="note">♪</span><span class="note">♫</span><span class="note">♪</span>
       <svg viewBox="0 0 300 300" aria-label="Honey Bear">
         <ellipse cx="150" cy="285" rx="80" ry="10" fill="#00000018"/>
+        <defs><linearGradient id="wingGrad" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#f7e9ff"/><stop offset=".55" stop-color="#d7c4ff"/><stop offset="1" stop-color="#ffc4e3"/></linearGradient></defs>
         <g id="bear">
+          <g id="wings" transform="translate(150 168) scale(1.55) translate(-150 -180)">
+            <g class="wing" id="wingL">
+            <path d="M146 172 C120 120 60 70 34 96 C14 118 40 160 82 172 C104 178 128 178 146 176 Z" fill="url(#wingGrad)" stroke="#9a7fe0" stroke-width="3" stroke-linejoin="round"/>
+            <path d="M146 182 C116 188 70 206 62 232 C56 254 86 262 108 244 C124 230 138 206 148 188 Z" fill="url(#wingGrad)" stroke="#9a7fe0" stroke-width="3" stroke-linejoin="round"/>
+            <path d="M138 172 C112 140 80 112 56 104 M140 186 C118 200 96 218 82 238" stroke="#bba3f2" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+            <circle cx="62" cy="122" r="3" fill="#fff"/><circle cx="84" cy="146" r="2.2" fill="#fff"/><circle cx="80" cy="226" r="2.5" fill="#fff"/>
+            </g>
+            <g class="wing" id="wingR" transform="translate(300 0) scale(-1 1)">
+            <g class="wingInner">
+            <path d="M146 172 C120 120 60 70 34 96 C14 118 40 160 82 172 C104 178 128 178 146 176 Z" fill="url(#wingGrad)" stroke="#9a7fe0" stroke-width="3" stroke-linejoin="round"/>
+            <path d="M146 182 C116 188 70 206 62 232 C56 254 86 262 108 244 C124 230 138 206 148 188 Z" fill="url(#wingGrad)" stroke="#9a7fe0" stroke-width="3" stroke-linejoin="round"/>
+            <path d="M138 172 C112 140 80 112 56 104 M140 186 C118 200 96 218 82 238" stroke="#bba3f2" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+            <circle cx="62" cy="122" r="3" fill="#fff"/><circle cx="84" cy="146" r="2.2" fill="#fff"/><circle cx="80" cy="226" r="2.5" fill="#fff"/>
+            </g>
+            </g>
+          </g>
           <ellipse cx="110" cy="262" rx="28" ry="20" fill="var(--honey-dk)"/>
           <ellipse cx="190" cy="262" rx="28" ry="20" fill="var(--honey-dk)"/>
           <g id="armL"><ellipse cx="80" cy="200" rx="20" ry="40" fill="var(--honey-dk)" transform="rotate(25 80 200)"/><circle cx="102" cy="172" r="17" fill="#a9d6f7" stroke="#5e9fd4" stroke-width="3"/></g>
